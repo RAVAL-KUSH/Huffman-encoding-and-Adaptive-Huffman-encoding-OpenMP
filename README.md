@@ -1,0 +1,1 @@
+# Huffman-encoding-and-Adaptive-Huffman-encoding-OpenMP
