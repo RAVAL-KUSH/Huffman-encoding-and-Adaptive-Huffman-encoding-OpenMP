@@ -1,147 +1,251 @@
 #include <iostream>
 #include <map>
-using namespace std;
+#include <sstream>
+#include <bitset>
 
-
-
-namespace serial
+class AdaptiveHuffmanCoding
 {
+public:
+	AdaptiveHuffmanCoding();
+	void UpdateTreeModel(int);
+	std::string Encode(int);
+	int Decode(std::istream&);
+	
+	~AdaptiveHuffmanCoding();
+	//Used in order to specify the end of the compressed text => on live decompressing the decoder will know when to stop
+	static const int PSEUDO_EOF = 256;
+private:
+	AdaptiveHuffmanCoding(const AdaptiveHuffmanCoding&); //both copy constructor and assignment operator are useless in this case
+	AdaptiveHuffmanCoding& operator= (const AdaptiveHuffmanCoding&);
 
-    struct node
-    {
-        char value;
-        int weight;
-        int order;
-        bool isNYT;
-        node *left, *right, *parent;
-        node(char value, int weight, int order, node* left, node* right, node* parent, bool isNYT = false)
-        :value(value), weight(weight), order(order), left(left), right(right), parent(parent), isNYT(isNYT) {};
-    };
+	struct HuffmanNode
+	{
+		int value;      //8-bit character contained in tree node
+		int weight;   //number of times val has occured in file so far
+		int order;    //ordering system to track weights
 
-    void updateHuffmanTree(const char& symbol)
-    {
-        node* newLeaf = nullptr;
-        node* symbolNode = GetSymbolNode(symbol, root);
+		HuffmanNode* left;
+		HuffmanNode* right;
+		HuffmanNode* parent;
 
-        if(symbolNode == nullptr)
-        {
-            NYTnode->isNYT = false;
-            int currentMinOrder = NYTnode->order;
-            NYTnode->left = new node(-1, 0, currentMinOrder - 2, nullptr, nullptr, NYTnode, true);
-		    NYTnode->right = new node(symbol, 0, currentMinOrder - 1, nullptr, nullptr, NYTnode, false);
-            symbolNode = NYTnode->right;
-            NYTnode = NYTnode->left;
-        }
-        SlideAndIncrement(symbolNode);
-    }
+		bool isNYT;
 
-    void SlideAndIncrement(node* curr)
-    {
-        if(curr == nullptr) return;
-        node *blockLeader = curr;
-        FindBlockLeader(root, blockLeader);
-        if(blockLeader != curr) 
-            SwapNodes(blockLeader, curr);
-        ++curr->weight;
-        SlideAndIncrement(curr->parent);
-    }
+		HuffmanNode(int value, int weight, int order, HuffmanNode* left, HuffmanNode* right,
+			HuffmanNode* parent, bool isNYT = false)
+			:value(value), weight(weight), order(order), left(left), right(right), parent(parent), isNYT(isNYT)
+		{}
+		HuffmanNode()
+			: value(0), weight(0), order(0), left(nullptr), right(nullptr), parent(nullptr), isNYT(false)
+		{}
 
-    void FindBlockLeader(node* curr, node* &currMax)
-    {
-        if(curr==nullptr || currMax == root) return;
-        if (curr->weight == currMax->weight && curr != currMax->parent  && curr->order > currMax->order)
-	    {
-		    currMax = curr;
-	    }
-        FindBlockLeader(curr->left, currMax);
-        FindBlockLeader(curr->right, currMax);
-    }
+		HuffmanNode(bool isNYT, int value)
+			: HuffmanNode()
+		{
+			this->isNYT = isNYT;
+			this->value = value;
+		}
+	};
 
-    void SwapNodes(node* a, node* b)
-    {
-        if (a->parent == nullptr || b->parent == nullptr) return;
-    
-        if (a->parent == b || b->parent ==a) return;
+	HuffmanNode* GetSymbolNode(int, HuffmanNode*) const;
+	void FindBlockLeader(HuffmanNode*, HuffmanNode*&) const;
+	void SwapNodes(HuffmanNode*, HuffmanNode*);
+	std::string GetPathToSymbol(HuffmanNode*, HuffmanNode*, std::string) const;
+	void SlideAndIncrement(HuffmanNode*);
 
-        node *&aRef =a->parent->left ==a ?a->parent->left :a->parent->right;
-        node *&bRef = b->parent->left == b ? b->parent->left : b->parent->right;
+	void DeleteHuffmanTree(HuffmanNode*);
 
-        std::swap(aRef, bRef);
-        std::swap(aRef->parent, bRef->parent);
-        std::swap(aRef->order, bRef->order);
+	HuffmanNode	*NYTNode;
+	HuffmanNode *root;
+};
 
-    }
-
-    node* GetSymbolNode(const char& symbol, node* curr) 
-    {
-        if(curr == nullptr || curr->value == symbol)
-        {
-            return curr;
-        }
-
-        node* leftResult = GetSymbolNode(symbol, curr->left);
-        return leftResult == nullptr ? GetSymbolNode(symbol, curr->right) : leftResult;
-    }
-
-    string Encode(const char& symbol)
-    {
-        node* symbolNode = GetSymbolNode(symbol,root);
-        if(symbolNode != nullptr)
-        {
-               
-        }
-    }
-
-    string GetPathToSymbol(node* curr, node* result, string currPath)
-    {
-        if(curr == result)
-            return currPath;
-        if(curr == nullptr)
-            return "";
-        
-        string left = GetPathToSymbol(curr->left, result, currPath+"0");
-        return left != "" ? left : GetPathToSymbol(curr->left, result, currPath+"1");
-    }
-
-    string huffmanEncoder(const string& message)
-    {
-        for(auto& i : message)
-            encode(i)
-        string encodedMessage;
-        for(auto& i : message)
-            
-    }
-
-    string huffmanDecoder(const string& encodedmessage)
-    {
-        string decoded;
-        return decoded;
-    }
-
-    void DeleteTree(node* curr)
-    {
-        if(curr == nullptr) return;
-        DeleteTree(curr->left);
-        DeleteTree(curr->right);
-        delete curr;
-    }
+AdaptiveHuffmanCoding::AdaptiveHuffmanCoding()
+	: root(new HuffmanNode(-1, 0, 512, nullptr, nullptr, nullptr, true))
+{
+	NYTNode = root;
 }
 
+void AdaptiveHuffmanCoding::UpdateTreeModel(int symbol)
+{
+	HuffmanNode *leafToIncrement = nullptr;
+	HuffmanNode *symbolNode = GetSymbolNode(symbol, root);
 
-serial::node* root = new serial::node(-1, 0, 512, nullptr, nullptr, nullptr, true);
-serial::node* NYTnode = root;
+	if (symbolNode == nullptr)
+	{
+		NYTNode->isNYT = false;
+		int currentMinOrder = NYTNode->order;
+		NYTNode->left = new HuffmanNode(-1, 0, currentMinOrder - 2, nullptr, nullptr, NYTNode, true);
+		NYTNode->right = new HuffmanNode(symbol, 0, currentMinOrder - 1, nullptr, nullptr, NYTNode, false);
+		symbolNode = NYTNode->right;
+		NYTNode = NYTNode->left;
+	}
+			
+	SlideAndIncrement(symbolNode);	
+}
+
+std::string AdaptiveHuffmanCoding::Encode(int symbol)
+{
+	HuffmanNode *symbolNode = GetSymbolNode(symbol, root);
+	if (symbolNode != nullptr)
+	{
+		std::string result = GetPathToSymbol(root, symbolNode, "");
+		UpdateTreeModel(symbol);
+		return result;
+	}
+	
+	std::stringstream ss;
+	ss << GetPathToSymbol(root, NYTNode, "") << std::bitset<9>(symbol);
+
+	UpdateTreeModel(symbol);
+	return ss.str();
+}
+
+int AdaptiveHuffmanCoding::Decode(std::istream &inputStr)
+{
+	int result = -1;
+	HuffmanNode *crr = root;
+	while (result == -1)
+	{
+		if (crr->value != -1)
+		{
+			result = crr->value;
+			UpdateTreeModel(crr->value);
+			crr = root;
+		}
+		else if (crr->isNYT)
+		{
+			char numberArr[10];
+			inputStr.getline(numberArr, 10);
+			inputStr.clear();
+			int number = std::stoi(numberArr, nullptr, 2);
+			result = number;
+			UpdateTreeModel(number);
+			crr = root;
+		}
+		else if(inputStr.get() == '0')
+		{
+			crr = crr->left;
+		}
+		else crr = crr->right;
+	}
+
+	return result;
+}
+
+AdaptiveHuffmanCoding::~AdaptiveHuffmanCoding()
+{
+	DeleteHuffmanTree(root);
+}
+
+AdaptiveHuffmanCoding::HuffmanNode * AdaptiveHuffmanCoding::GetSymbolNode(int symbol, HuffmanNode *crr) const
+{
+	if (crr == nullptr || crr->value == symbol) 
+	{
+		return crr;
+	}
+
+	HuffmanNode *leftResult = GetSymbolNode(symbol, crr->left);
+	
+	return leftResult == nullptr ? GetSymbolNode(symbol, crr->right) : leftResult;
+}
+
+void AdaptiveHuffmanCoding::FindBlockLeader(HuffmanNode *crr, HuffmanNode *&crrMax) const
+{
+	if (crr == nullptr || crrMax == root)
+	{
+		return;
+	}
+
+	if (crr->weight == crrMax->weight && crr != crrMax->parent  && crr->order > crrMax->order)
+	{
+		crrMax = crr;
+	}
+
+	FindBlockLeader(crr->left, crrMax);
+	FindBlockLeader(crr->right, crrMax);
+}
+
+void AdaptiveHuffmanCoding::SwapNodes(HuffmanNode *first, HuffmanNode *second)
+{
+	if (first->parent == nullptr || second->parent == nullptr) return;
+	
+	if (first->parent == second || second->parent == first) return;
+
+	HuffmanNode *&firstRef = first->parent->left == first ? first->parent->left : first->parent->right;
+	HuffmanNode *&secondRef = second->parent->left == second ? second->parent->left : second->parent->right;
+
+	std::swap(firstRef, secondRef);
+	std::swap(firstRef->parent, secondRef->parent);
+	std::swap(firstRef->order, secondRef->order);
+}
+
+std::string AdaptiveHuffmanCoding::GetPathToSymbol(HuffmanNode *crr, HuffmanNode *result, std::string currentPath) const
+{
+	if (crr == result)
+	{
+		return currentPath;
+	}
+	if (crr == nullptr)
+	{
+		return "";
+	}
+	
+	std::string left = GetPathToSymbol(crr->left, result, currentPath + "0");
+	return left != "" ? left : GetPathToSymbol(crr->right, result, currentPath + "1");
+}
+
+void AdaptiveHuffmanCoding::SlideAndIncrement(HuffmanNode *node)
+{
+	if (node == nullptr)
+	{
+		return;
+	}
+
+	HuffmanNode *blockLeader = node;
+	FindBlockLeader(root, blockLeader);
+	if (blockLeader != node)
+	{
+		SwapNodes(blockLeader, node);
+	}
+
+	++node->weight;
+	SlideAndIncrement(node->parent);
+}
+
+void AdaptiveHuffmanCoding::DeleteHuffmanTree(HuffmanNode *crrNode)
+{
+	if (crrNode == nullptr) return;
+
+	DeleteHuffmanTree(crrNode->left);
+	DeleteHuffmanTree(crrNode->right);
+
+	delete crrNode;
+}
+
+const int AdaptiveHuffmanCoding::PSEUDO_EOF;
+
+
 
 int main()
 {
-    string message = "lorem ipsum ipsum";
-    string encodedMessage;
-    map<char,string> huffCodes;
+    AdaptiveHuffmanCoding encoder, decoder;
+    std::string message="It's working!!!";
+	std::string encoded, decoded;
+    std::stringstream encodedStream,decodedStream;
     for(auto& i : message)
-        serial::updateHuffmanTree(i);
-    //serial::huffmanEncoder(message, encodedMessage, &root);
-    cout << "Encoded Message: " << encodedMessage << endl;
-    string decodedMessage = serial::huffmanDecoder(encodedMessage);
-    cout << "Decoded Message: " << decodedMessage << endl;
+        encodedStream << encoder.Encode(i);
+	encodedStream << encoder.Encode(AdaptiveHuffmanCoding::PSEUDO_EOF);
+	encoded = encodedStream.str();
 
+	int symbol = decoder.Decode(encodedStream);
+	while(symbol != AdaptiveHuffmanCoding::PSEUDO_EOF)
+	{
+		decodedStream << (char)symbol;
+		symbol = decoder.Decode(encodedStream);
+	}
+	decoded=decodedStream.str();
+
+	std::cout << "Original Message: " << message << std::endl;
+	std::cout << "Encoded Message: " << encoded << std::endl;
+	std::cout << "Decoded Message: " << decoded << std::endl;
     return 0;
 }
