@@ -1,5 +1,5 @@
 cc = g++
-flags = 
+flags = -pg
 profFlags = 
 
 all: launch profiler

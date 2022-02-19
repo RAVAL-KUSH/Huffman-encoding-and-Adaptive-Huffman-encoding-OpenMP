@@ -282,9 +282,9 @@ int main()
     clock_t start,end;
     //total 16 tests
     
-    //ofstream runtimeAnalysis("huffmanCoding.csv");
+    // ofstream runtimeAnalysis("huffmanCoding.csv");   //Uncomment this to store in csv
     unsigned noOfChar;
-    //runtimeAnalysis << "No. of Paragraphs" << "," << "Time(s)" << "\n";
+    // runtimeAnalysis << "Characters" << "," << "Time(s)" << "\n";     //Uncomment this to store in csv
     for(int i = 3 ; i <= 19 ; i++)
     {
         start=clock();
@@ -292,10 +292,10 @@ int main()
 		HuffTest(noOfChar);
         end=clock();
         double wallTime = (end-start)/(double)CLOCKS_PER_SEC;
-        //runtimeAnalysis << inputFiles[i] << "," << wallTime << "\n";
+        // runtimeAnalysis << noOfChar << "," << wallTime << "\n";      //Uncomment this to store in csv
         std::cout <<"Total Characters: " << noOfChar << ", " << "Time taken: " << wallTime << "s\n";
     }
     // HuffmanTest(inputFiles[10]);
-    //runtimeAnalysis.close();
+    //runtimeAnalysis.close();      //Uncomment this to store in csv
     return 0;
 }
