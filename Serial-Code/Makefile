@@ -1,12 +1,17 @@
 cc = g++
-src = main.cpp
+src = huffman.cpp
+flags = -pg
 
 
-all: compile launch
+all: launch
 
-compile:
-	$(cc) $(src) -o out
+huffman:
+	$(cc) huffman.cpp -o out $(flags)
+	.\out
 
+ADhuffman:
+	$(cc) adaptiveHuffman.cpp -o out $(flags)
+	.\out
 
 launch:
 	.\out
