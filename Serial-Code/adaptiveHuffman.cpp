@@ -1,9 +1,11 @@
 #include <iostream>
 #include <map>
 #include <sstream>
+#include <math.h>
 #include <fstream>
 #include <assert.h>
 #include <bitset>
+#include <time.h>
 
 class AdaptiveHuffmanCoding
 {
@@ -226,15 +228,20 @@ void AdaptiveHuffmanCoding::DeleteHuffmanTree(HuffmanNode *crrNode)
 const int AdaptiveHuffmanCoding::PSEUDO_EOF;
 
 
-
-int main()
+void HuffTest(unsigned noOfChar)
 {
-    std::ifstream inputFile("input.txt");
+	// std::cout << "Paragraph count: " + filename << std::endl;
+    std::ifstream inputFile("testData");
+	if (!inputFile.is_open())
+    {
+        std::cerr << "Failed to open input file"<<std::endl;
+        exit(EXIT_FAILURE);
+    }
     AdaptiveHuffmanCoding encoder, decoder;
 	std::string encoded, decoded, message;
     std::stringstream encodedStream,decodedStream, messageStream;
 	char symbol = inputFile.get();
-    while(!inputFile.eof())
+    for(int i = 0 ; i < noOfChar; i++)
 	{
 		messageStream << symbol;
         encodedStream << encoder.Encode(symbol);
@@ -252,9 +259,31 @@ int main()
 	decoded=decodedStream.str();
 	message = messageStream.str();
 	// assert(message == decoded);
-	std::cout << "Original Message: " << message << std::endl;
-	std::cout << "Encoded Message: " << encoded << std::endl;
-	std::cout << "Decoded Message: " << decoded << std::endl;
+	// std::cout << "Original Message: " << message << std::endl;
+	// std::cout << "Encoded Message: " << encoded << std::endl;
+	// std::cout << "Decoded Message: " << decoded << std::endl;
 	inputFile.close();
-    return 0;
+}
+
+int main()
+{
+    clock_t start,end;
+    //total 16 tests
+    
+    //std::ofstream runtimeAnalysis("AdaptivehuffmanCoding.csv");
+	unsigned noOfChar;
+    //runtimeAnalysis << "No. of Paragraphs" << "," << "Time(s)" << "\n";
+    for(int i = 3 ; i <= 19 ; i++)
+    {
+        start=clock();
+		noOfChar = std::pow(2,i);
+		HuffTest(noOfChar);
+        end=clock();
+        double wallTime = (end-start)/(double)CLOCKS_PER_SEC;
+        //runtimeAnalysis << inputFiles[i] << "," << wallTime << "\n";
+		std::cout <<"Total Characters: " << noOfChar << ", " << "Time taken: " << wallTime << "s\n";
+    }
+    // HuffmanTest(inputFiles[10]);
+    //runtimeAnalysis.close();
+	return 0;
 }

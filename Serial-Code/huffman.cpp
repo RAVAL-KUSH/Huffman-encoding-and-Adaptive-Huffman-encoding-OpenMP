@@ -3,8 +3,10 @@
 #include <vector>
 #include <fstream>
 #include <algorithm>
+#include <math.h>
 #include <string>
 #include <assert.h>
+#include <time.h>
 
 using namespace std;
 
@@ -182,8 +184,8 @@ namespace serial
         }
         if (isLeaf(root)) 
         {
-            cout << root->item << "  | ";
-            printArray(arr, top);
+            // cout << root->item << "  | ";
+            // printArray(arr, top);
             string tempcode;
             for(int i = 0 ; i < top; i++ )
                 tempcode += to_string(arr[i]);
@@ -215,10 +217,10 @@ namespace serial
         *root = buildHfTree(item, freq);
         int arr[MAX_TREE_HT], top = 0;
         map<char,string> huffCodes;
-        cout << "Huffman Codes: \n";
+        //cout << "Huffman Codes: \n";
         printHCodes(*root, arr, top, huffCodes);
         for(auto& i : message)
-            encodedMessage += huffCodes[i];
+             encodedMessage += huffCodes[i];
         
     }
 
@@ -251,24 +253,49 @@ namespace serial
 }
 
 
-int main()
+
+void HuffTest(unsigned noOfChar)
 {
-    ifstream inputFile("input.txt");
+
+    ifstream inputFile("testData");
     if (!inputFile.is_open())
     {
-        cerr << "Failed to open file 'input.txt'"<<endl;
+        cerr << "Failed to open input file"<<endl;
         exit(EXIT_FAILURE);
     }
-    string message = string((istreambuf_iterator<char>(inputFile)),istreambuf_iterator<char>());
+    string message;
+    std::copy_n(std::istreambuf_iterator<char>(inputFile.rdbuf()),noOfChar,std::back_inserter(message));
     string encodedMessage;
-    map<char,string> huffCodes;
     serial::MinHNode* root;
     serial::huffmanEncoder(message, encodedMessage, &root);
+    // cout << message.size() << endl;
     string decodedMessage = serial::huffmanDecoder(encodedMessage,root);
     // assert(message == decodedMessage);
-    cout << "Encoded Message: " << encodedMessage << endl;
-    cout << "Decoded Message: " << decodedMessage << endl;
+    //cout << "Encoded Message: " << encodedMessage << endl;
+    //cout << "Decoded Message: " << decodedMessage << endl;
     serial::DeleteTree(root);
     inputFile.close();
+}
+
+int main()
+{
+    clock_t start,end;
+    //total 16 tests
+    
+    //ofstream runtimeAnalysis("huffmanCoding.csv");
+    unsigned noOfChar;
+    //runtimeAnalysis << "No. of Paragraphs" << "," << "Time(s)" << "\n";
+    for(int i = 3 ; i <= 19 ; i++)
+    {
+        start=clock();
+        noOfChar = pow(2,i);
+		HuffTest(noOfChar);
+        end=clock();
+        double wallTime = (end-start)/(double)CLOCKS_PER_SEC;
+        //runtimeAnalysis << inputFiles[i] << "," << wallTime << "\n";
+        std::cout <<"Total Characters: " << noOfChar << ", " << "Time taken: " << wallTime << "s\n";
+    }
+    // HuffmanTest(inputFiles[10]);
+    //runtimeAnalysis.close();
     return 0;
 }
