@@ -1,17 +1,17 @@
 cc = g++
-src = huffman.cpp
 flags = -pg
+profFlags = -s
 
-
-all: launch
+all: launch profiler
 
 huffman:
-	$(cc) huffman.cpp -o out $(flags)
-	.\out
+	$(cc) huffman.cpp -o main $(flags)
 
 ADhuffman:
-	$(cc) adaptiveHuffman.cpp -o out $(flags)
-	.\out
+	$(cc) adaptiveHuffman.cpp -o main $(flags)
 
 launch:
-	.\out
+	./main
+
+profiler:
+	gprof $(profFlags) main gmon.out >gprof-out.txt

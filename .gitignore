@@ -1,3 +1,6 @@
 .vscode
 *.exe
 *.out
+*.sum
+gprof-out.txt
+main

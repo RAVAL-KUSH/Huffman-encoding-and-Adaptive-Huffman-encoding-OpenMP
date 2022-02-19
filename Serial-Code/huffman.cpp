@@ -1,8 +1,10 @@
 #include <iostream>
 #include <map>
 #include <vector>
+#include <fstream>
 #include <algorithm>
 #include <string>
+#include <assert.h>
 
 using namespace std;
 
@@ -251,14 +253,22 @@ namespace serial
 
 int main()
 {
-    string message = "lorem ipsum ipsum";
+    ifstream inputFile("input.txt");
+    if (!inputFile.is_open())
+    {
+        cerr << "Failed to open file 'input.txt'"<<endl;
+        exit(EXIT_FAILURE);
+    }
+    string message = string((istreambuf_iterator<char>(inputFile)),istreambuf_iterator<char>());
     string encodedMessage;
     map<char,string> huffCodes;
     serial::MinHNode* root;
     serial::huffmanEncoder(message, encodedMessage, &root);
-    cout << "Encoded Message: " << encodedMessage << endl;
     string decodedMessage = serial::huffmanDecoder(encodedMessage,root);
+    // assert(message == decodedMessage);
+    cout << "Encoded Message: " << encodedMessage << endl;
     cout << "Decoded Message: " << decodedMessage << endl;
     serial::DeleteTree(root);
+    inputFile.close();
     return 0;
 }

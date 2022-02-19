@@ -1,6 +1,8 @@
 #include <iostream>
 #include <map>
 #include <sstream>
+#include <fstream>
+#include <assert.h>
 #include <bitset>
 
 class AdaptiveHuffmanCoding
@@ -227,25 +229,32 @@ const int AdaptiveHuffmanCoding::PSEUDO_EOF;
 
 int main()
 {
+    std::ifstream inputFile("input.txt");
     AdaptiveHuffmanCoding encoder, decoder;
-    std::string message="It's working!!!";
-	std::string encoded, decoded;
-    std::stringstream encodedStream,decodedStream;
-    for(auto& i : message)
-        encodedStream << encoder.Encode(i);
+	std::string encoded, decoded, message;
+    std::stringstream encodedStream,decodedStream, messageStream;
+	char symbol = inputFile.get();
+    while(!inputFile.eof())
+	{
+		messageStream << symbol;
+        encodedStream << encoder.Encode(symbol);
+		symbol = inputFile.get();
+	}
 	encodedStream << encoder.Encode(AdaptiveHuffmanCoding::PSEUDO_EOF);
 	encoded = encodedStream.str();
 
-	int symbol = decoder.Decode(encodedStream);
-	while(symbol != AdaptiveHuffmanCoding::PSEUDO_EOF)
+	int symbolAsc = decoder.Decode(encodedStream);
+	while(symbolAsc != AdaptiveHuffmanCoding::PSEUDO_EOF)
 	{
-		decodedStream << (char)symbol;
-		symbol = decoder.Decode(encodedStream);
+		decodedStream << (char)symbolAsc;
+		symbolAsc = decoder.Decode(encodedStream);
 	}
 	decoded=decodedStream.str();
-
+	message = messageStream.str();
+	// assert(message == decoded);
 	std::cout << "Original Message: " << message << std::endl;
 	std::cout << "Encoded Message: " << encoded << std::endl;
 	std::cout << "Decoded Message: " << decoded << std::endl;
+	inputFile.close();
     return 0;
 }
