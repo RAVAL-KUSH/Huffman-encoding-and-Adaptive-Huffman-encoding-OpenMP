@@ -277,6 +277,7 @@ void HuffTest(unsigned noOfChar)
     inputFile.close();
 }
 
+// bulk test main
 int main()
 {
     clock_t start,end;

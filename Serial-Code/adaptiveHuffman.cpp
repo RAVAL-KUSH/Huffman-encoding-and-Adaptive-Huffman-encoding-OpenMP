@@ -13,7 +13,10 @@ public:
 	AdaptiveHuffmanCoding();
 	void UpdateTreeModel(int);
 	std::string Encode(int);
-	int Decode(std::istream&);
+	std::string Encode2(int);
+	std::string Decode(const std::string&);
+	int Decode2(std::istream&);
+
 	
 	~AdaptiveHuffmanCoding();
 	//Used in order to specify the end of the compressed text => on live decompressing the decoder will know when to stop
@@ -21,7 +24,8 @@ public:
 private:
 	AdaptiveHuffmanCoding(const AdaptiveHuffmanCoding&); //both copy constructor and assignment operator are useless in this case
 	AdaptiveHuffmanCoding& operator= (const AdaptiveHuffmanCoding&);
-
+	int e = 4;
+	int r = 10;
 	struct HuffmanNode
 	{
 		int value;      //8-bit character contained in tree node
@@ -97,13 +101,97 @@ std::string AdaptiveHuffmanCoding::Encode(int symbol)
 	}
 	
 	std::stringstream ss;
+	if(symbol <= 2*r)
+		ss << GetPathToSymbol(root, NYTNode, "") << std::bitset<5>(symbol-1);
+	else
+		ss << GetPathToSymbol(root, NYTNode, "") << std::bitset<4>(symbol-r-1);
+	UpdateTreeModel(symbol);
+	return ss.str();
+}
+
+std::string AdaptiveHuffmanCoding::Encode2(int symbol)
+{
+	HuffmanNode *symbolNode = GetSymbolNode(symbol, root);
+	if (symbolNode != nullptr)
+	{
+		std::string result = GetPathToSymbol(root, symbolNode, "");
+		UpdateTreeModel(symbol);
+		return result;
+	}
+	
+	std::stringstream ss;
 	ss << GetPathToSymbol(root, NYTNode, "") << std::bitset<9>(symbol);
 
 	UpdateTreeModel(symbol);
 	return ss.str();
 }
 
-int AdaptiveHuffmanCoding::Decode(std::istream &inputStr)
+
+std::string AdaptiveHuffmanCoding::Decode(const std::string& inputStr)
+{
+	std::string decoded;
+	char *Arr1 = new char[4];
+	char *Arr2 = new char[5];
+	
+	int val, index=0;
+	bool traversing = false;
+	HuffmanNode* currNode;
+
+
+	while(index!=inputStr.size())
+	{
+		if(traversing)
+		{
+			if(inputStr[index]=='1')
+			{
+				currNode = currNode->right;
+			}
+			else
+			{
+				currNode = currNode->left;
+			}
+			if(currNode->value != -1)
+			{
+				val = currNode->value;
+				decoded += val+'a'-1;
+				UpdateTreeModel(val);
+				currNode = root;
+			}
+			if(currNode->isNYT)
+				traversing = false;
+			index++;
+		}
+		else
+		{
+			inputStr.copy(Arr1,e,index);
+			val = std::stoi(Arr1, nullptr, 2);
+			if(val < r)
+			{
+				inputStr.copy(Arr2,e+1,index);
+				val = std::stoi(Arr2, nullptr, 2) + 1;
+				decoded += val + 'a' - 1;
+				index += e+1;
+				
+			}
+			else
+			{
+				inputStr.copy(Arr1,e,index);
+				val = std::stoi(Arr1, nullptr, 2) + r + 1;
+				decoded += val + 'a' - 1;
+				index += e;
+			}
+			UpdateTreeModel(val);
+			traversing = true;
+			currNode = root;
+		}
+	}
+	delete Arr1;
+	delete Arr2;
+	return decoded;
+	
+}
+
+int AdaptiveHuffmanCoding::Decode2(std::istream &inputStr)
 {
 	int result = -1;
 	HuffmanNode *crr = root;
@@ -132,7 +220,7 @@ int AdaptiveHuffmanCoding::Decode(std::istream &inputStr)
 		else crr = crr->right;
 	}
 
-	return result;
+	return result+'a';
 }
 
 AdaptiveHuffmanCoding::~AdaptiveHuffmanCoding()
@@ -250,11 +338,11 @@ void HuffTest(unsigned noOfChar)
 	encodedStream << encoder.Encode(AdaptiveHuffmanCoding::PSEUDO_EOF);
 	encoded = encodedStream.str();
 
-	int symbolAsc = decoder.Decode(encodedStream);
+	int symbolAsc = decoder.Decode2(encodedStream);
 	while(symbolAsc != AdaptiveHuffmanCoding::PSEUDO_EOF)
 	{
 		decodedStream << (char)symbolAsc;
-		symbolAsc = decoder.Decode(encodedStream);
+		symbolAsc = decoder.Decode2(encodedStream);
 	}
 	decoded=decodedStream.str();
 	message = messageStream.str();
@@ -265,6 +353,26 @@ void HuffTest(unsigned noOfChar)
 	inputFile.close();
 }
 
+int main()
+{
+	std::string message = "aardvark", encoded,decoded;
+	std::stringstream messageStream, encodedStream;
+	AdaptiveHuffmanCoding encoder, decoder;
+	for(auto& i : message)
+	{
+		// messageStream << i;
+		encodedStream << encoder.Encode(i-'a'+1);
+	}
+	decoded = decoder.Decode(encodedStream.str());
+	//encodedStream << encoder.Encode(AdaptiveHuffmanCoding::PSEUDO_EOF);
+	encoded = encodedStream.str();
+	std::cout << "Message: " << message << std::endl;
+	std::cout << "Encoded: " << encoded << std::endl;
+	std::cout << "Decoded: " << decoded << std::endl;
+	return 0;
+}
+
+/*
 int main()
 {
     clock_t start,end;
@@ -286,4 +394,4 @@ int main()
     // HuffmanTest(inputFiles[10]);
     //runtimeAnalysis.close();		//Uncomment this to store in csv
 	return 0;
-}
+}*/
