@@ -7,6 +7,7 @@
 #include <string>
 #include <assert.h>
 #include <time.h>
+#include <omp.h>
 
 using namespace std;
 
@@ -277,6 +278,38 @@ void HuffTest(unsigned noOfChar)
     inputFile.close();
 }
 
+void huffParallelTest(unsigned& noOfChar, int nthreads)
+{
+    ifstream inputFile("testData");
+    if (!inputFile.is_open())
+    {
+        cerr << "Failed to open input file"<<endl;
+        exit(EXIT_FAILURE);
+    }
+    string message;
+    vector<serial::MinHNode*> root(nthreads);
+    for(int i = 0 ; i < nthreads ; i++)
+        root[i] = new serial::MinHNode();
+    std::copy_n(std::istreambuf_iterator<char>(inputFile.rdbuf()),noOfChar,std::back_inserter(message));
+    inputFile.close();
+    nthreads = message.size() < nthreads ? message.size() : nthreads;
+    vector<string> messageArr(nthreads);
+    vector<string> encodedMessage(nthreads);
+
+    for(int i = 0 ; i < message.size() ; i++)
+        messageArr[i%nthreads] += message[i];
+    omp_set_num_threads(nthreads);
+    #pragma omp parallel 
+    {
+        int n = omp_get_thread_num();
+        serial::huffmanEncoder(messageArr[n], encodedMessage[n], &root[n]);
+        string decodedMessage = serial::huffmanDecoder(encodedMessage[n],root[n]);
+        //std::cout << decodedMessage << std::endl;
+        serial::DeleteTree(root[n]);
+    }
+
+}
+
 // bulk test main
 int main()
 {
@@ -290,7 +323,8 @@ int main()
     {
         start=clock();
         noOfChar = pow(2,i);
-		HuffTest(noOfChar);
+		//HuffTest(noOfChar);
+        huffParallelTest(noOfChar, 8);
         end=clock();
         double wallTime = (end-start)/(double)CLOCKS_PER_SEC;
         // runtimeAnalysis << noOfChar << "," << wallTime << "\n";      //Uncomment this to store in csv

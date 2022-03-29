@@ -6,6 +6,8 @@
 #include <assert.h>
 #include <bitset>
 #include <time.h>
+#include <vector>
+#include <omp.h>
 
 class AdaptiveHuffmanCoding
 {
@@ -220,7 +222,7 @@ int AdaptiveHuffmanCoding::Decode2(std::istream &inputStr)
 		else crr = crr->right;
 	}
 
-	return result+'a';
+	return result;
 }
 
 AdaptiveHuffmanCoding::~AdaptiveHuffmanCoding()
@@ -332,10 +334,10 @@ void HuffTest(unsigned noOfChar)
     for(int i = 0 ; i < noOfChar; i++)
 	{
 		messageStream << symbol;
-        encodedStream << encoder.Encode(symbol);
+        encodedStream << encoder.Encode2(symbol);
 		symbol = inputFile.get();
 	}
-	encodedStream << encoder.Encode(AdaptiveHuffmanCoding::PSEUDO_EOF);
+	encodedStream << encoder.Encode2(AdaptiveHuffmanCoding::PSEUDO_EOF);
 	encoded = encodedStream.str();
 
 	int symbolAsc = decoder.Decode2(encodedStream);
@@ -353,39 +355,83 @@ void HuffTest(unsigned noOfChar)
 	inputFile.close();
 }
 
-int main()
+void parallelHuffTest(unsigned noOfChar, int nthreads)
 {
-	std::string message = "aardvark", encoded,decoded;
-	std::stringstream messageStream, encodedStream;
-	AdaptiveHuffmanCoding encoder, decoder;
-	for(auto& i : message)
+	std::ifstream inputFile("testData");
+	if (!inputFile.is_open())
+    {
+        std::cerr << "Failed to open input file"<<std::endl;
+        exit(EXIT_FAILURE);
+    }
+	std::vector<AdaptiveHuffmanCoding> encoder(nthreads), decoder(nthreads);
+	std::vector<std::string> encoded(nthreads), decoded(nthreads), messageArr(nthreads);
+	std::stringstream messageStream, encoderStream, decodedStream;
+	char symbol = inputFile.get();
+    for(int i = 0 ; i < noOfChar; i++)
 	{
-		// messageStream << i;
-		encodedStream << encoder.Encode(i-'a'+1);
+		messageStream << symbol;
+		symbol = inputFile.get();
+	}	
+	inputFile.close();
+	std::string message = messageStream.str();
+	for(int i = 0 ; i < message.size();i++)
+		messageArr[i%nthreads] += message[i];
+	omp_set_num_threads(nthreads);
+	#pragma omp parallel private(encoderStream, decodedStream)
+	{
+		int n = omp_get_thread_num();
+		for(int i = 0 ; i < messageArr[n].size() ; i++)
+		{
+			encoderStream << encoder[n].Encode2(messageArr[n][i]);
+		}
+		encoderStream << encoder[n].Encode2(AdaptiveHuffmanCoding::PSEUDO_EOF);
+		encoded[n] = encoderStream.str();
+
+		int symbolAsc = decoder[n].Decode2(encoderStream);
+		while(symbolAsc != AdaptiveHuffmanCoding::PSEUDO_EOF)
+		{
+			decodedStream << (char)symbolAsc;
+			symbolAsc = decoder[n].Decode2(encoderStream);
+		}
+		decoded[n]=decodedStream.str();
+
 	}
-	decoded = decoder.Decode(encodedStream.str());
-	//encodedStream << encoder.Encode(AdaptiveHuffmanCoding::PSEUDO_EOF);
-	encoded = encodedStream.str();
-	std::cout << "Message: " << message << std::endl;
-	std::cout << "Encoded: " << encoded << std::endl;
-	std::cout << "Decoded: " << decoded << std::endl;
-	return 0;
 }
 
-/*
-int main()
-{
-    clock_t start,end;
-    //total 16 tests
-    
-    // std::ofstream runtimeAnalysis("AdaptivehuffmanCoding.csv");    //Uncomment this to store in csv
-	unsigned noOfChar;
-    // runtimeAnalysis << "Characters" << "," << "Time(s)" << "\n";   //Uncomment this to store in csv
-    for(int i = 3 ; i <= 19 ; i++)
-    {
-        start=clock();
-		noOfChar = std::pow(2,i);
+	// int main()
+	// {
+	// 	std::string message = "aardvark", encoded,decoded;
+	// 	std::stringstream messageStream, encodedStream;
+	// 	AdaptiveHuffmanCoding encoder, decoder;
+	// 	for(auto& i : message)
+	// 	{
+	// 		// messageStream << i;
+	// 		encodedStream << encoder.Encode(i-'a'+1);
+	// 	}
+	// 	decoded = decoder.Decode(encodedStream.str());
+	// 	//encodedStream << encoder.Encode(AdaptiveHuffmanCoding::PSEUDO_EOF);
+	// 	encoded = encodedStream.str();
+	// 	std::cout << "Message: " << message << std::endl;
+	// 	std::cout << "Encoded: " << encoded << std::endl;
+	// 	std::cout << "Decoded: " << decoded << std::endl;
+	// 	return 0;
+	// }
+
+
+	int main()
+	{
+		clock_t start,end;
+		//total 16 tests
+		
+		// std::ofstream runtimeAnalysis("AdaptivehuffmanCoding.csv");    //Uncomment this to store in csv
+		unsigned noOfChar;
+		// runtimeAnalysis << "Characters" << "," << "Time(s)" << "\n";   //Uncomment this to store in csv
+		for(int i = 3 ; i <= 19 ; i++)
+		{
+			start=clock();
+			noOfChar = std::pow(2,i);
 		HuffTest(noOfChar);
+		//parallelHuffTest(noOfChar, 4);
         end=clock();
         double wallTime = (end-start)/(double)CLOCKS_PER_SEC;
         // runtimeAnalysis << noOfChar << "," << wallTime << "\n";		//Uncomment this to store in csv
@@ -394,4 +440,4 @@ int main()
     // HuffmanTest(inputFiles[10]);
     //runtimeAnalysis.close();		//Uncomment this to store in csv
 	return 0;
-}*/
+}

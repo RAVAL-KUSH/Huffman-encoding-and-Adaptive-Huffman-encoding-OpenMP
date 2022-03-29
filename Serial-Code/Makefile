@@ -1,8 +1,8 @@
 cc = g++
-flags = -pg
+flags = -fopenmp
 profFlags = 
 
-all: launch profiler
+all: launch
 
 huffman:
 	$(cc) huffman.cpp -o main $(flags)
