@@ -423,19 +423,24 @@ void parallelHuffTest(unsigned noOfChar, int nthreads)
 		clock_t start,end;
 		//total 16 tests
 		
-		// std::ofstream runtimeAnalysis("AdaptivehuffmanCoding.csv");    //Uncomment this to store in csv
 		unsigned noOfChar;
-		// runtimeAnalysis << "Characters" << "," << "Time(s)" << "\n";   //Uncomment this to store in csv
-		for(int i = 3 ; i <= 19 ; i++)
+		std::string filename = "AdaptivehuffmanCoding";
+		for(int p = 4 ; p <= 48 ; p+=4)
 		{
-			start=clock();
-			noOfChar = std::pow(2,i);
-		HuffTest(noOfChar);
-		//parallelHuffTest(noOfChar, 4);
-        end=clock();
-        double wallTime = (end-start)/(double)CLOCKS_PER_SEC;
-        // runtimeAnalysis << noOfChar << "," << wallTime << "\n";		//Uncomment this to store in csv
-		std::cout <<"Total Characters: " << noOfChar << ", " << "Time taken: " << wallTime << "s\n";
+			//std::ofstream runtimeAnalysis(std::string(filename + "_p_" + std::to_string(p) + ".csv"));    //Uncomment this to store in csv
+			//runtimeAnalysis << "Characters" << "," << "Time(s)" << "\n";   //Uncomment this to store in csv
+			std::cout << "Processors:  " << p << std::endl;
+			for(int i = 3 ; i <= 19 ; i++)
+			{
+				start=clock();
+				noOfChar = std::pow(2,i);
+			//HuffTest(noOfChar);
+			parallelHuffTest(noOfChar, p);
+			end=clock();
+			double wallTime = (end-start)/(double)CLOCKS_PER_SEC;
+			//runtimeAnalysis << noOfChar << "," << wallTime << "\n";		//Uncomment this to store in csv
+			std::cout <<"Total Characters: " << noOfChar << ", " << "Time taken: " << wallTime << "s\n";
+		}
     }
     // HuffmanTest(inputFiles[10]);
     //runtimeAnalysis.close();		//Uncomment this to store in csv

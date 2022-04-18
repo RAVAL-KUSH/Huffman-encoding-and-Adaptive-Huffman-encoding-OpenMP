@@ -1,336 +1,311 @@
 #include <iostream>
-#include <map>
 #include <vector>
-#include <fstream>
-#include <algorithm>
-#include <math.h>
+#include <map>
 #include <string>
-#include <assert.h>
-#include <time.h>
-#include <omp.h>
+#include <fstream>
 
-using namespace std;
+#define MAX_TREE_HT 50
 
-namespace serial
+struct MinHNode {
+    unsigned freq;
+    uint8_t item;
+    struct MinHNode *left, *right;
+};
+
+struct MinH {
+    unsigned size;
+    unsigned capacity;
+    struct MinHNode **array;
+};
+
+// Creating Huffman tree node
+struct MinHNode *newNode(uint8_t item, unsigned freq) 
 {
-    #define MAX_TREE_HT 50
+    struct MinHNode *temp = (struct MinHNode *)malloc(sizeof(struct MinHNode));
 
-    struct MinHNode {
-        unsigned freq;
-        char item;
-        struct MinHNode *left, *right;
-    };
+    temp->left = temp->right = NULL;
+    temp->item = item;
+    temp->freq = freq;
 
-    struct MinH {
-        unsigned size;
-        unsigned capacity;
-        struct MinHNode **array;
-    };
+    return temp;
+}
 
-    // Creating Huffman tree node
-    struct MinHNode *newNode(char item, unsigned freq) 
+// Create min heap using given capacity
+struct MinH *createMinH(unsigned capacity) 
+{
+    struct MinH *minHeap = (struct MinH *)malloc(sizeof(struct MinH));
+    minHeap->size = 0;
+    minHeap->capacity = capacity;
+    minHeap->array = (struct MinHNode **)malloc(minHeap->capacity * sizeof(struct MinHNode *));
+    return minHeap;
+}
+
+// Print the array
+void printArray(int arr[], int n) 
+{
+    int i;
+    for (i = 0; i < n; ++i)
+        std::cout << arr[i];
+    std::cout << "\n";
+}
+
+// Swap function
+void swapMinHNode(struct MinHNode **a, struct MinHNode **b) 
+{
+    struct MinHNode *t = *a;
+    *a = *b;
+    *b = t;
+}
+
+// Heapify
+void minHeapify(struct MinH *minHeap, int idx) 
+{
+    int smallest = idx;
+    int left = 2 * idx + 1;
+    int right = 2 * idx + 2;
+
+    if (left < minHeap->size && minHeap->array[left]->freq < minHeap->array[smallest]->freq)
+        smallest = left;
+
+    if (right < minHeap->size && minHeap->array[right]->freq < minHeap->array[smallest]->freq)
+        smallest = right;
+
+    if (smallest != idx) 
     {
-        struct MinHNode *temp = (struct MinHNode *)malloc(sizeof(struct MinHNode));
+        swapMinHNode(&minHeap->array[smallest], &minHeap->array[idx]);
+        minHeapify(minHeap, smallest);
+    }
+}
 
-        temp->left = temp->right = NULL;
-        temp->item = item;
-        temp->freq = freq;
+// Check if size if 1
+int checkSizeOne(struct MinH *minHeap) 
+{
+    return (minHeap->size == 1);
+}
 
-        return temp;
+// Extract the min
+struct MinHNode *extractMin(struct MinH *minHeap) 
+{
+    struct MinHNode *temp = minHeap->array[0];
+    minHeap->array[0] = minHeap->array[minHeap->size - 1];
+
+    --minHeap->size;
+    minHeapify(minHeap, 0);
+
+    return temp;
+}
+
+// Insertion
+void insertMinHeap(struct MinH *minHeap, struct MinHNode *minHeapNode) 
+{
+    ++minHeap->size;
+    int i = minHeap->size - 1;
+
+    while (i && minHeapNode->freq < minHeap->array[(i - 1) / 2]->freq) 
+    {
+        minHeap->array[i] = minHeap->array[(i - 1) / 2];
+        i = (i - 1) / 2;
     }
 
-    // Create min heap using given capacity
-    struct MinH *createMinH(unsigned capacity) 
+    minHeap->array[i] = minHeapNode;
+}
+
+// BUild min heap
+void buildMinHeap(struct MinH *minHeap) 
+{
+    int n = minHeap->size - 1;
+    int i;
+
+    for (i = (n - 1) / 2; i >= 0; --i)
+        minHeapify(minHeap, i);
+}
+
+int isLeaf(struct MinHNode *root) 
+{
+    return !(root->left) && !(root->right);
+}
+
+struct MinH *createAndBuildMinHeap(const std::vector<uint8_t>& item,const std::vector<unsigned>& freq) 
+{
+    int size = freq.size();
+    struct MinH *minHeap = createMinH(size);
+
+    for (int i = 0; i < size; ++i)
+        minHeap->array[i] = newNode(item[i], freq[i]);
+
+    minHeap->size = size;
+    buildMinHeap(minHeap);
+
+    return minHeap;
+}
+
+struct MinHNode *buildHfTree(const std::vector<uint8_t>& item,const std::vector<unsigned>& freq) 
+{
+
+    struct MinHNode *left, *right, *top;
+    struct MinH *minHeap = createAndBuildMinHeap(item, freq);
+
+    while (!checkSizeOne(minHeap)) 
     {
-        struct MinH *minHeap = (struct MinH *)malloc(sizeof(struct MinH));
-        minHeap->size = 0;
-        minHeap->capacity = capacity;
-        minHeap->array = (struct MinHNode **)malloc(minHeap->capacity * sizeof(struct MinHNode *));
-        return minHeap;
+        left = extractMin(minHeap);
+        right = extractMin(minHeap);
+
+        top = newNode('$', left->freq + right->freq);
+
+        top->left = left;
+        top->right = right;
+
+        insertMinHeap(minHeap, top);
+    }
+    return extractMin(minHeap);
+}
+
+void printHCodes(struct MinHNode *root, int arr[], int top, std::map<uint8_t,std::string>& huffCodes) 
+{
+    if (root->left) 
+    {
+        arr[top] = 0;
+        printHCodes(root->left, arr, top + 1, huffCodes);
     }
 
-    // Print the array
-    void printArray(int arr[], int n) 
+    if (root->right) 
     {
-        int i;
-        for (i = 0; i < n; ++i)
-            cout << arr[i];
-
-        cout << "\n";
+        arr[top] = 1;
+        printHCodes(root->right, arr, top + 1, huffCodes);
     }
-
-    // Swap function
-    void swapMinHNode(struct MinHNode **a, struct MinHNode **b) 
+    if (isLeaf(root)) 
     {
-        struct MinHNode *t = *a;
-        *a = *b;
-        *b = t;
-    }
-
-    // Heapify
-    void minHeapify(struct MinH *minHeap, int idx) 
-    {
-        int smallest = idx;
-        int left = 2 * idx + 1;
-        int right = 2 * idx + 2;
-
-        if (left < minHeap->size && minHeap->array[left]->freq < minHeap->array[smallest]->freq)
-            smallest = left;
-
-        if (right < minHeap->size && minHeap->array[right]->freq < minHeap->array[smallest]->freq)
-            smallest = right;
-
-        if (smallest != idx) 
-        {
-            swapMinHNode(&minHeap->array[smallest], &minHeap->array[idx]);
-            minHeapify(minHeap, smallest);
-        }
-    }
-
-    // Check if size if 1
-    int checkSizeOne(struct MinH *minHeap) 
-    {
-        return (minHeap->size == 1);
-    }
-
-    // Extract the min
-    struct MinHNode *extractMin(struct MinH *minHeap) 
-    {
-        struct MinHNode *temp = minHeap->array[0];
-        minHeap->array[0] = minHeap->array[minHeap->size - 1];
-
-        --minHeap->size;
-        minHeapify(minHeap, 0);
-
-        return temp;
-    }
-
-    // Insertion
-    void insertMinHeap(struct MinH *minHeap, struct MinHNode *minHeapNode) 
-    {
-        ++minHeap->size;
-        int i = minHeap->size - 1;
-
-        while (i && minHeapNode->freq < minHeap->array[(i - 1) / 2]->freq) 
-        {
-            minHeap->array[i] = minHeap->array[(i - 1) / 2];
-            i = (i - 1) / 2;
-        }
-
-        minHeap->array[i] = minHeapNode;
-    }
-
-    // BUild min heap
-    void buildMinHeap(struct MinH *minHeap) 
-    {
-        int n = minHeap->size - 1;
-        int i;
-
-        for (i = (n - 1) / 2; i >= 0; --i)
-            minHeapify(minHeap, i);
-    }
-
-    int isLeaf(struct MinHNode *root) 
-    {
-        return !(root->left) && !(root->right);
-    }
-
-    struct MinH *createAndBuildMinHeap(const vector<char>& item,const vector<unsigned>& freq) 
-    {
-        int size = freq.size();
-        struct MinH *minHeap = createMinH(size);
-
-        for (int i = 0; i < size; ++i)
-            minHeap->array[i] = newNode(item[i], freq[i]);
-
-        minHeap->size = size;
-        buildMinHeap(minHeap);
-
-        return minHeap;
-    }
-
-    struct MinHNode *buildHfTree(const vector<char>& item,const vector<unsigned>& freq) 
-    {
-
-        struct MinHNode *left, *right, *top;
-        struct MinH *minHeap = createAndBuildMinHeap(item, freq);
-
-        while (!checkSizeOne(minHeap)) 
-        {
-            left = extractMin(minHeap);
-            right = extractMin(minHeap);
-
-            top = newNode('$', left->freq + right->freq);
-
-            top->left = left;
-            top->right = right;
-
-            insertMinHeap(minHeap, top);
-        }
-        return extractMin(minHeap);
-    }
-
-    void printHCodes(struct MinHNode *root, int arr[], int top, map<char,string>& huffCodes) 
-    {
-        if (root->left) 
-        {
-            arr[top] = 0;
-            printHCodes(root->left, arr, top + 1, huffCodes);
-        }
-
-        if (root->right) 
-        {
-            arr[top] = 1;
-            printHCodes(root->right, arr, top + 1, huffCodes);
-        }
-        if (isLeaf(root)) 
-        {
-            // cout << root->item << "  | ";
-            // printArray(arr, top);
-            string tempcode;
-            for(int i = 0 ; i < top; i++ )
-                tempcode += to_string(arr[i]);
-            huffCodes[root->item]+=tempcode;
-            
-        }
-    }
-
-    bool cmp(pair<char,unsigned>& a, pair<char,unsigned>& b)
-    {
-        return a.second < b.second;
-    }
-
-    void huffmanEncoder(const string& message, string& encodedMessage, MinHNode** root)
-    {
-        int length = message.size();
-        map<char,int> freqMap;
-        for(auto& c : message)
-            freqMap[c]++;
-        vector<unsigned> freq(freqMap.size());
-        vector<char>item(freqMap.size());
-        int i = 0;
-        for(auto& it : freqMap)
-        {
-            item[i]=it.first;
-            freq[i]=it.second;
-            i++;
-        }
-        *root = buildHfTree(item, freq);
-        int arr[MAX_TREE_HT], top = 0;
-        map<char,string> huffCodes;
-        //cout << "Huffman Codes: \n";
-        printHCodes(*root, arr, top, huffCodes);
-        for(auto& i : message)
-             encodedMessage += huffCodes[i];
+        // cout << root->item << "  | ";
+        // printArray(arr, top);
+        std::string tempcode;
+        for(int i = 0 ; i < top; i++ )
+            tempcode += std::to_string(arr[i]);
+        huffCodes[root->item]+=tempcode;
         
     }
+}
 
-    string huffmanDecoder(const string& message, MinHNode* root)
+bool cmp(std::pair<char,unsigned>& a, std::pair<char,unsigned>& b)
+{
+    return a.second < b.second;
+}
+
+void huffmanEncoder(const std::vector<uint8_t>& message, std::string& encodedMessage, MinHNode** root)
+{
+    int length = message.size();
+    std::map<uint8_t,int> freqMap;
+    for(auto& c : message)
+        freqMap[c]++;
+    std::vector<unsigned> freq(freqMap.size());
+    std::vector<uint8_t>item(freqMap.size());
+    int i = 0;
+    for(auto& it : freqMap)
     {
-        string decoded;
-        MinHNode* curr = root;
-        for(auto& i : message)
+        item[i]=it.first;
+        freq[i]=it.second;
+        i++;
+    }
+    *root = buildHfTree(item, freq);
+    int arr[MAX_TREE_HT], top = 0;
+    std::map<uint8_t,std::string> huffCodes;
+    //cout << "Huffman Codes: \n";
+    printHCodes(*root, arr, top, huffCodes);
+    std::vector<uint8_t> temp;
+    for(auto& i : message)
+            encodedMessage += huffCodes[i];
+    
+}
+
+std::vector<uint8_t> huffmanDecoder(const std::string& message, MinHNode* root)
+{
+    std::vector<uint8_t> decoded;
+    MinHNode* curr = root;
+    for(auto& i : message)
+    {
+        if(i=='0')
+            curr = curr->left;
+        else
+            curr = curr->right;
+        if(isLeaf(curr))
         {
-            if(i=='0')
-                curr = curr->left;
-            else
-                curr = curr->right;
-            if(isLeaf(curr))
-            {
-                decoded += curr->item;
-                curr = root;
-            }
+            decoded.push_back(curr->item);
+            curr = root;
         }
-        return decoded+'\0';
     }
-
-    void DeleteTree(MinHNode *curr)
-    {
-        if(curr == nullptr) return;
-        DeleteTree(curr->left);
-        DeleteTree(curr->right);
-        delete curr;
-    }
+    return decoded;
 }
 
+void DeleteTree(MinHNode *curr)
+{
+    if(curr == nullptr) return;
+    DeleteTree(curr->left);
+    DeleteTree(curr->right);
+    delete curr;
+}
+
+void serialImp()
+{
+    std::cout 
+        <<  "Choose dataset : \n" 
+            "1. bonsai CT scan (256x256x256) \n"
+            "2. anu"
+    clock_t start, end;
+    std::ifstream dataBuff("bonsai_256x256x256_uint8.raw", std::ios::binary | std::ios::in);
+    if(!dataBuff.is_open())
+    {
+        std::cout << "Error opening file " << std::endl;
+        return;
+    }
+    //uint8_t dataArr[256][256][256];
+    std::vector<uint8_t> dataArr;
+    char temp[sizeof(uint8_t)];
+    int ind = 0;
+    while(dataBuff.read(temp, sizeof(temp)))
+    {
+        dataArr.push_back((uint8_t)atoi(temp));
+    }
+    std::string encodedMessage;
+    MinHNode* root;
 
 
-void HuffTest(unsigned noOfChar)
+    huffmanEncoder(dataArr, encodedMessage, &root);
+    std::vector<uint8_t> decodedMess = huffmanDecoder(encodedMessage, root);
+
+    std::cout << "Message Size: " << dataArr.size() << std::endl;
+    std::cout << "8-bit Message Size:" << dataArr.size()*8 << std::endl;
+    std::cout << "Huffman Encoded Message Size:" << encodedMessage.size() << std::endl;
+    std::cout << "Decoded Message Size: " << decodedMess.size() << std::endl;
+}
+
+void parallelImp()
 {
 
-    ifstream inputFile("testData");
-    if (!inputFile.is_open())
-    {
-        cerr << "Failed to open input file"<<endl;
-        exit(EXIT_FAILURE);
-    }
-    string message;
-    std::copy_n(std::istreambuf_iterator<char>(inputFile.rdbuf()),noOfChar,std::back_inserter(message));
-    string encodedMessage;
-    serial::MinHNode* root;
-    serial::huffmanEncoder(message, encodedMessage, &root);
-    // cout << message.size() << endl;
-    string decodedMessage = serial::huffmanDecoder(encodedMessage,root);
-    // assert(message == decodedMessage);
-    //cout << "Encoded Message: " << encodedMessage << endl;
-    //cout << "Decoded Message: " << decodedMessage << endl;
-    serial::DeleteTree(root);
-    inputFile.close();
 }
 
-void huffParallelTest(unsigned& noOfChar, int nthreads)
-{
-    ifstream inputFile("testData");
-    if (!inputFile.is_open())
-    {
-        cerr << "Failed to open input file"<<endl;
-        exit(EXIT_FAILURE);
-    }
-    string message;
-    vector<serial::MinHNode*> root(nthreads);
-    for(int i = 0 ; i < nthreads ; i++)
-        root[i] = new serial::MinHNode();
-    std::copy_n(std::istreambuf_iterator<char>(inputFile.rdbuf()),noOfChar,std::back_inserter(message));
-    inputFile.close();
-    nthreads = message.size() < nthreads ? message.size() : nthreads;
-    vector<string> messageArr(nthreads);
-    vector<string> encodedMessage(nthreads);
+enum Code{
+    serial=1,
+    parallel
+};
 
-    for(int i = 0 ; i < message.size() ; i++)
-        messageArr[i%nthreads] += message[i];
-    omp_set_num_threads(nthreads);
-    #pragma omp parallel 
-    {
-        int n = omp_get_thread_num();
-        serial::huffmanEncoder(messageArr[n], encodedMessage[n], &root[n]);
-        string decodedMessage = serial::huffmanDecoder(encodedMessage[n],root[n]);
-        //std::cout << decodedMessage << std::endl;
-        serial::DeleteTree(root[n]);
-    }
-
-}
-
-// bulk test main
+//serial implementation
 int main()
 {
-    clock_t start,end;
-    //total 16 tests
-    
-    // ofstream runtimeAnalysis("huffmanCoding.csv");   //Uncomment this to store in csv
-    unsigned noOfChar;
-    // runtimeAnalysis << "Characters" << "," << "Time(s)" << "\n";     //Uncomment this to store in csv
-    for(int i = 3 ; i <= 19 ; i++)
+    uint8_t ch;
+    std::cout << "Serial[1] or Parallel[2] ? ";
+    std::cin >> ch ;
+    switch (ch)
     {
-        start=clock();
-        noOfChar = pow(2,i);
-		//HuffTest(noOfChar);
-        huffParallelTest(noOfChar, 8);
-        end=clock();
-        double wallTime = (end-start)/(double)CLOCKS_PER_SEC;
-        // runtimeAnalysis << noOfChar << "," << wallTime << "\n";      //Uncomment this to store in csv
-        std::cout <<"Total Characters: " << noOfChar << ", " << "Time taken: " << wallTime << "s\n";
+    case Code::serial:
+        serialImp();
+        break;
+    
+    case Code::parallel:
+        parallelImp();
+        break;
+
+    default:
+        break;
     }
-    // HuffmanTest(inputFiles[10]);
-    //runtimeAnalysis.close();      //Uncomment this to store in csv
+    
     return 0;
 }
