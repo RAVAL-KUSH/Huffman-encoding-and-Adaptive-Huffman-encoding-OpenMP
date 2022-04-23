@@ -1,2 +1,0 @@
-https://www.programiz.com/dsa/huffman-coding
-https://github.com/ZdravkoHvarlingov/huffman-coding.git

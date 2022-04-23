@@ -3,6 +3,7 @@
 *.out
 *.sum
 *.csv
+*.raw
 gprof-out.txt
 huffman_gfg.cpp
 main
