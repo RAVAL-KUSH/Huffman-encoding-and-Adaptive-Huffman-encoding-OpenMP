@@ -398,51 +398,108 @@ void parallelHuffTest(unsigned noOfChar, int nthreads)
 	}
 }
 
-	// int main()
-	// {
-	// 	std::string message = "aardvark", encoded,decoded;
-	// 	std::stringstream messageStream, encodedStream;
-	// 	AdaptiveHuffmanCoding encoder, decoder;
-	// 	for(auto& i : message)
-	// 	{
-	// 		// messageStream << i;
-	// 		encodedStream << encoder.Encode(i-'a'+1);
-	// 	}
-	// 	decoded = decoder.Decode(encodedStream.str());
-	// 	//encodedStream << encoder.Encode(AdaptiveHuffmanCoding::PSEUDO_EOF);
-	// 	encoded = encodedStream.str();
-	// 	std::cout << "Message: " << message << std::endl;
-	// 	std::cout << "Encoded: " << encoded << std::endl;
-	// 	std::cout << "Decoded: " << decoded << std::endl;
-	// 	return 0;
-	// }
+void ReadData(int& size, std::vector<uint16_t>& dataArr)
+{
+	int ch;
+    std::string filename;
 
-
-	int main()
-	{
-		clock_t start,end;
-		//total 16 tests
-		
-		unsigned noOfChar;
-		std::string filename = "AdaptivehuffmanCoding";
-		for(int p = 4 ; p <= 48 ; p+=4)
-		{
-			//std::ofstream runtimeAnalysis(std::string(filename + "_p_" + std::to_string(p) + ".csv"));    //Uncomment this to store in csv
-			//runtimeAnalysis << "Characters" << "," << "Time(s)" << "\n";   //Uncomment this to store in csv
-			std::cout << "Processors:  " << p << std::endl;
-			for(int i = 3 ; i <= 19 ; i++)
-			{
-				start=clock();
-				noOfChar = std::pow(2,i);
-			//HuffTest(noOfChar);
-			parallelHuffTest(noOfChar, p);
-			end=clock();
-			double wallTime = (end-start)/(double)CLOCKS_PER_SEC;
-			//runtimeAnalysis << noOfChar << "," << wallTime << "\n";		//Uncomment this to store in csv
-			std::cout <<"Total Characters: " << noOfChar << ", " << "Time taken: " << wallTime << "s\n";
-		}
+    std::cout <<  
+        "\nChoose dataset : \n" 
+        "1. bonsai CT scan (256x256x256) \n"
+        "2. aneurism CT scan (256x256x256) \n"
+        "3. head aneurism CT scan (512x512x512) \n";
+    std::cin >> ch;
+    switch(ch)
+    {   
+        case 1:
+            filename = "bonsai_256x256x256_uint8.raw";
+            size = 1;
+            break;
+        case 2:
+            filename = "aneurism_256x256x256_uint8.raw";
+            size = 1;
+            break;
+        case 3:
+            filename = "vertebra_512x512x512_uint16.raw";
+            size = 2;
+            break;
     }
-    // HuffmanTest(inputFiles[10]);
-    //runtimeAnalysis.close();		//Uncomment this to store in csv
+
+    std::ifstream dataBuff(filename, std::ios::binary | std::ios::in);
+    if(!dataBuff.is_open())
+    {
+        std::cout << "Error opening file " << std::endl;
+        return;
+    }   
+
+    char temp[size];
+    int ind = 0;
+    while(dataBuff.read(temp, sizeof(temp)))
+    {
+        dataArr.push_back((uint16_t)temp[0]);
+    }
+}
+
+void serialImp()
+{
+	int size;
+	std::vector<uint16_t> dataArr, decoded;
+	std::cout << "Read Data \n";
+	ReadData(size, dataArr);
+	#pragma omp parallel num_threads(5)
+	{
+		AdaptiveHuffmanCoding encoder, decoder;
+		std::string encoded, message;
+		std::stringstream encodedStream;
+
+		std::cout << "Encode \n";
+		#pragma omp for
+		for(int i = 0 ; i < dataArr.size() ; i++)
+		{
+			encodedStream << encoder.Encode2(dataArr[i]);
+		}
+		std::cout << "decode \n";
+		#pragma omp for
+		for(int i = 0 ; i < dataArr.size() ; i++)
+		{
+			decoded.push_back(decoder.Decode2(encodedStream));
+		}
+	}
+	std::cout << "Verify \n";
+	int err = 0;
+	for(int i = 0 ; i < dataArr.size(); i++)
+		if( dataArr[i] != decoded[i])
+			err++;
+	std::cout << err << std::endl;
+}
+
+void parallelImp()
+{
+
+}
+
+enum Code{
+	serial=1,
+	parallel
+};
+
+int main()
+{
+	int ch;
+    std::cout << "Serial[1] or Parallel[2] ? ";
+    std::cin >> ch ;
+    switch (ch)
+    {
+    case Code::serial:
+        serialImp();
+        break;
+    
+    case Code::parallel:
+        parallelImp();
+        break;
+
+    default:
+        break;
+    }
 	return 0;
 }
