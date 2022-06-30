@@ -39,7 +39,7 @@ private:
 		HuffmanNode* right;
 		HuffmanNode* parent;
 
-		bool isNYT;
+		bool isNYT; // Checking Condition
 
 		HuffmanNode(int value, int weight, int order, HuffmanNode* left, HuffmanNode* right,
 			HuffmanNode* parent, bool isNYT = false)
